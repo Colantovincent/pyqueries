@@ -1,23 +1,23 @@
 import field
+import table
 
-class Table:
-    fields = []
- 
 class Query:
     def __init__(self):
         self.string_representation = ""
         self.where_clauses = []
     
-    def select(self, fields: list, table: str):
+    def select(self, fields: list[field.Field, str], table: str):
         self.string_representation = "SELECT "
 
         if fields:
             for field in fields:
-                self.string_representation += f"{field}, "
+                self.string_representation += f"`{field}`, "
         else:
             self.string_representation += "* "
 
-        self.string_representation += f"FROM {table} "
+        if table:
+            if table == fields[0].table:
+                self.string_representation += f"FROM `{table}` "
 
         return self
 
@@ -38,10 +38,11 @@ class Query:
 
 if __name__ == "__main__":
     import pprint
-    
+
     myQuery = Query()
-    nome = field.Field("nome", 3)
-    print(field.Field._SQL_TYPES.get("VARCHAR"))
-    myQuery.select([], "persona").where(nome == "mario")
-  
+
+    persona = table.Table("persona" )
+    nome = field.Field("nome", 45, "VARCHAR", False, persona)
+    myQuery.select([nome], persona).where(nome == "Mario' AND 1=1")
+    
     pprint.pprint(myQuery.get_string())
