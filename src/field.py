@@ -1,5 +1,12 @@
 import datetime
 import table
+import re
+
+_PROHIBITED = {
+        "`": "🖕😺",
+        "'": "🖕😺",
+        "\"": "🖕😺"
+    }
 
 class Field:
     _SQL_TYPES = {
@@ -41,8 +48,8 @@ class Field:
             }
     }
 
-    def __init__(self,  name: str, size: int = -1, sql_type: str = "", nullable: bool = False, table: table.Table | None = None):
-        self.table = table
+    def __init__(self, name: str, size: int = -1, sql_type: str = "", nullable: bool = True, source_table: table.Table | None = None):
+        self.source_table = source_table
         self.name = name
         self.size = size
         found_type = sql_type.upper().strip()
@@ -50,54 +57,66 @@ class Field:
             self.sql_type = found_type
             self.sql_rules = self._SQL_TYPES[found_type]
         else:
-            self.sql_type = ""
+            self.sql_type = None
         self.nullable = nullable
     
     def __str__(self):
         return self.name
     
     def __lt__(self, other):
-        self._validate_value(str(other))
-        if self.table:
-            stringified = f"`{self.table}`.`{self.name}` < {self.to_sql_format(other)}"
+        self._validate_value(other)
+        if self.source_table:
+            string_rep = f"`{self.source_table}`.`{self.name}` < {self.to_sql_format(other)}"
         else:
-            stringified = f"`{self.name}` < {self.to_sql_format(other)}"
-        return stringified
+            string_rep = f"`{self.name}` < {self.to_sql_format(other)}"
+        return string_rep
     def __gt__(self, other):
-        self._validate_value(str(other))
-        if self.table:
-            stringified = f"`{self.table}`.`{self.name}` > {self.to_sql_format(other)}"
+        self._validate_value(other)
+        if self.source_table:
+            string_rep = f"`{self.source_table}`.`{self.name}` > {self.to_sql_format(other)}"
         else:
-            stringified = f"`{self.name}` > {self.to_sql_format(other)}"
-        return stringified
+            string_rep = f"`{self.name}` > {self.to_sql_format(other)}"
+        return string_rep
     def __eq__(self, other):
-        self._validate_value(str(other))
-        if self.table:
-            stringified = f"`{self.table}`.`{self.name}` = {self.to_sql_format(other)}"
+        self._validate_value(other)
+
+        if other is None:
+            comparison = "IS"
         else:
-            stringified = f"`{self.name}` = {self.to_sql_format(other)}"
-        return stringified
+            comparison = "="
+
+        if self.source_table:
+            string_rep = f"`{self.source_table}`.`{self.name}` {comparison} {self.to_sql_format(other)}"
+        else:
+            string_rep = f"`{self.name}` {comparison} {self.to_sql_format(other)}"
+        return string_rep
     def __ne__(self, other):
-        self._validate_value(str(other))
-        if self.table:
-            stringified = f"`{self.table}`.`{self.name}` != {self.to_sql_format(other)}"
+        self._validate_value(other)
+
+        if other is None:
+            comparison = "IS NOT"
         else:
-            stringified = f"`{self.name}` != {self.to_sql_format(other)}"
-        return stringified
+            comparison = "!="
+
+        if self.source_table:
+            string_rep = f"`{self.source_table}`.`{self.name}` {comparison} {self.to_sql_format(other)}"
+        else:
+            string_rep = f"`{self.name}` {comparison} {self.to_sql_format(other)}"
+        return string_rep
     def __le__(self, other):
-        self._validate_value(str(other))
-        if self.table:
-            stringified = f"`{self.table}`.`{self.name}` <= {self.to_sql_format(other)}"
+        self._validate_value(other)
+        if self.source_table:
+            string_rep = f"`{self.source_table}`.`{self.name}` <= {self.to_sql_format(other)}"
         else:
-            stringified = f"`{self.name}` <= {self.to_sql_format(other)}"
-        return stringified
+            string_rep = f"`{self.name}` <= {self.to_sql_format(other)}"
+        return string_rep
     def __ge__(self, other):
-        self._validate_value(str(other))
-        if self.table:
-            stringified = f"`{self.table}`.`{self.name}` >= {self.to_sql_format(other)}"
+        self._validate_value(other)
+        if self.source_table:
+            string_rep = f"`{self.source_table}`.`{self.name}` >= {self.to_sql_format(other)}"
         else:
-            stringified = f"`{self.name}` >= {self.to_sql_format(other)}"
-        return stringified
+            string_rep = f"`{self.name}` >= {self.to_sql_format(other)}"
+        return string_rep
     
     def _validate_value(self, val):
         if val is None:
@@ -105,19 +124,22 @@ class Field:
                 raise ValueError(f"Field '{self.name}' cannot be NULL")
             return
     
-        length = len(val)
+        length = len(str(val))
         val_type = type(val)
 
         if self.sql_type:
             if val_type not in self.sql_rules["types"]:
                 raise TypeError(f"'{val}' ({val_type}) can't be converted to {self.sql_type} ({self.sql_rules})")
             
-        if self.size > 0 and length > self.size:
+        if 0 < self.size < length:
             raise ValueError(f"Value '{val}' exceeds maximum length of field '{self.name}'\n'{val}': \t{length}\nmaximum: \t{self.size}")
-        
-    def to_sql_format(self, value):
+
+    @staticmethod
+    def to_sql_format(value):
 
         if isinstance(value, str):
+            for prohibited, alt in _PROHIBITED.items():
+                value = re.sub(re.escape(prohibited), alt, value)
             return f"'{value}'"
         elif value is None:
             return "NULL"

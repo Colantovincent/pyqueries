@@ -4,24 +4,23 @@ import table
 class Query:
     def __init__(self):
         self.string_representation = ""
-        self.where_clauses = []
+        self.where_clauses = list[str | bool]()
     
-    def select(self, fields: list[field.Field, str], table: str):
+    def select(self, fields: list[field.Field | str] | None = None, from_table: table.Table | str | None = None):
         self.string_representation = "SELECT "
 
         if fields:
-            for field in fields:
-                self.string_representation += f"`{field}`, "
+            self.string_representation += ", ".join(f"`{query_field}`" for query_field in fields)
         else:
             self.string_representation += "* "
 
-        if table:
-            if table == fields[0].table:
-                self.string_representation += f"FROM `{table}` "
+        if from_table:
+            if from_table == fields[0].source_table:
+                self.string_representation += f" FROM `{from_table}` "
 
         return self
 
-    def where(self, cond = False):
+    def where(self, cond: str | bool = False):
         if cond:
             self.where_clauses.append(cond)
 
@@ -32,17 +31,6 @@ class Query:
         
         if self.where_clauses:
             string += "WHERE " + str.join(" AND ", self.where_clauses)
-        
+
+        string += ";"
         return string
-    
-
-if __name__ == "__main__":
-    import pprint
-
-    myQuery = Query()
-
-    persona = table.Table("persona" )
-    nome = field.Field("nome", 45, "VARCHAR", False, persona)
-    myQuery.select([nome], persona).where(nome == "Mario' AND 1=1")
-    
-    pprint.pprint(myQuery.get_string())
