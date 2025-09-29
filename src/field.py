@@ -1,11 +1,11 @@
 import datetime
 import table
-import re
+import sqlpart
 
 _PROHIBITED = {
-        "`": "🖕😺",
-        "'": "🖕😺",
-        "\"": "🖕😺"
+        "`": "\\`",
+        "'": "\\'",
+        "\"": "\\\""
     }
 
 class Field:
@@ -66,16 +66,16 @@ class Field:
     def __lt__(self, other):
         self._validate_value(other)
         if self.source_table:
-            string_rep = f"`{self.source_table}`.`{self.name}` < {self.to_sql_format(other)}"
+            string_rep = sqlpart.SQLPart(f"`{self.source_table}`.`{self.name}` < %s", other)
         else:
-            string_rep = f"`{self.name}` < {self.to_sql_format(other)}"
+            string_rep = sqlpart.SQLPart(f"`{self.name}` < %s", other)
         return string_rep
     def __gt__(self, other):
         self._validate_value(other)
         if self.source_table:
-            string_rep = f"`{self.source_table}`.`{self.name}` > {self.to_sql_format(other)}"
+            string_rep = sqlpart.SQLPart(f"`{self.source_table}`.`{self.name}` > %s", other)
         else:
-            string_rep = f"`{self.name}` > {self.to_sql_format(other)}"
+            string_rep = sqlpart.SQLPart(f"`{self.name}` > %s", other)
         return string_rep
     def __eq__(self, other):
         self._validate_value(other)
@@ -86,9 +86,10 @@ class Field:
             comparison = "="
 
         if self.source_table:
-            string_rep = f"`{self.source_table}`.`{self.name}` {comparison} {self.to_sql_format(other)}"
+            string_rep = sqlpart.SQLPart(f"`{self.source_table}`.`{self.name}` {comparison} %s", other)
         else:
-            string_rep = f"`{self.name}` {comparison} {self.to_sql_format(other)}"
+           string_rep = sqlpart.SQLPart(f"`{self.name}` {comparison} %s", other)
+        
         return string_rep
     def __ne__(self, other):
         self._validate_value(other)
@@ -99,23 +100,23 @@ class Field:
             comparison = "!="
 
         if self.source_table:
-            string_rep = f"`{self.source_table}`.`{self.name}` {comparison} {self.to_sql_format(other)}"
+           string_rep = sqlpart.SQLPart(f"`{self.source_table}`.`{self.name}` {comparison} %s", other)
         else:
-            string_rep = f"`{self.name}` {comparison} {self.to_sql_format(other)}"
+           string_rep = sqlpart.SQLPart(f"`{self.name}` {comparison} %s", other)
         return string_rep
     def __le__(self, other):
         self._validate_value(other)
         if self.source_table:
-            string_rep = f"`{self.source_table}`.`{self.name}` <= {self.to_sql_format(other)}"
+           string_rep = sqlpart.SQLPart(f"`{self.source_table}`.`{self.name}` <= %s", other)
         else:
-            string_rep = f"`{self.name}` <= {self.to_sql_format(other)}"
+           string_rep = sqlpart.SQLPart(f"`{self.name}` <= %s", other)
         return string_rep
     def __ge__(self, other):
         self._validate_value(other)
         if self.source_table:
-            string_rep = f"`{self.source_table}`.`{self.name}` >= {self.to_sql_format(other)}"
+           string_rep = sqlpart.SQLPart(f"`{self.source_table}`.`{self.name}` >= %s", other)
         else:
-            string_rep = f"`{self.name}` >= {self.to_sql_format(other)}"
+           string_rep = sqlpart.SQLPart(f"`{self.name}` >= %s", other)
         return string_rep
     
     def _validate_value(self, val):
@@ -133,17 +134,3 @@ class Field:
             
         if 0 < self.size < length:
             raise ValueError(f"Value '{val}' exceeds maximum length of field '{self.name}'\n'{val}': \t{length}\nmaximum: \t{self.size}")
-
-    @staticmethod
-    def to_sql_format(value):
-
-        if isinstance(value, str):
-            for prohibited, alt in _PROHIBITED.items():
-                value = re.sub(re.escape(prohibited), alt, value)
-            return f"'{value}'"
-        elif value is None:
-            return "NULL"
-        elif isinstance(value, bool):
-            return "TRUE" if value else "FALSE"
-        else:
-            return str(value)
