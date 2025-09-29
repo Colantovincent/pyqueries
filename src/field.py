@@ -2,12 +2,6 @@ import datetime
 import table
 import sqlpart
 
-_PROHIBITED = {
-        "`": "\\`",
-        "'": "\\'",
-        "\"": "\\\""
-    }
-
 class Field:
     _SQL_TYPES = {
         "VARCHAR":  {
@@ -52,17 +46,19 @@ class Field:
         self.source_table = source_table
         self.name = name
         self.size = size
+        self.nullable = nullable
+
         found_type = sql_type.upper().strip()
         if found_type in self._SQL_TYPES:
             self.sql_type = found_type
             self.sql_rules = self._SQL_TYPES[found_type]
         else:
             self.sql_type = None
-        self.nullable = nullable
-    
+
     def __str__(self):
         return self.name
-    
+
+    #----------------------------------BASIC COMPARISON----------------------------------
     def __lt__(self, other):
         self._validate_value(other)
         if self.source_table:
@@ -118,7 +114,14 @@ class Field:
         else:
            string_rep = sqlpart.SQLPart(f"`{self.name}` >= %s", other)
         return string_rep
-    
+
+    #----------------------------------SQL-SPECIFIC OPERATIONS----------------------------------
+    @staticmethod
+    def between(self, minimum, maximum):
+        self._validate_value(minimum)
+        self._validate_value(maximum)
+        return sqlpart.SQLPart("BETWEEN %s AND %s", (minimum, maximum))
+
     def _validate_value(self, val):
         if val is None:
             if not self.nullable:
