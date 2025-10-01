@@ -2,10 +2,37 @@ import field
 import table
 import sqlpart
 import typing
+import enum
+
+class JoinTypes(enum.Enum):
+    INNER = "INNER"
+    LEFT = "LEFT"
+    RIGHT = "RIGHT"
+
+class OnClauses(enum.Enum):
+    AND = "AND"
+    OR = "OR"
+    NOT = "NOT"
+
+class Join:
+    def __init__(self, join_table: table.Table | str):
+        self._table = join_table
+        self._conditions = dict()
+
+    def on(self, condition, condition_type: OnClauses | None = None):
+        if not self._conditions:
+            self._conditions[condition] = None
+        else:
+            if condition_type:
+                self._conditions[condition] = condition_type
+            else:
+                raise ValueError("You are trying to JOIN with multiple disconnected ON-statements")
+        return self
 
 class Query:
     def __init__(self):
         self.string_representation = ""
+        self._joined_tables = dict()
         self.where_clauses = list[sqlpart.SQLPart]()
         self.limit_records = -1
         self.limit_offset = -1
@@ -24,6 +51,14 @@ class Query:
                 self.string_representation += f" FROM `{from_table}` "
 
         return self
+
+    def join(self, joined_table: table.Table | str):
+        if joined_table not in self._joined_tables:
+            new_join = Join(joined_table)
+            self._joined_tables[joined_table.name] = new_join
+            return new_join
+        else:
+            raise ValueError("You're trying to join the same table multiple times in the same query!")
 
     def where(self, cond: str | sqlpart.SQLPart | bool = False):
         if not cond:
