@@ -4,7 +4,7 @@ import sqlpart
 import typing
 import enum
 
-from src.sqlpart import SQLPart
+from sqlpart import SQLPart
 
 
 class JoinTypes(enum.Enum):
@@ -67,7 +67,7 @@ class Join:
         Fetches the SQL name of the table that has been used to create the Join object
         :return: The object's table's name
         """
-        return self._table_name
+        return str(self._table)
 
 
 class Query:
@@ -106,9 +106,9 @@ class Query:
                 conds = []
                 for i, (condition, condition_type) in enumerate(join_object.conditions):
                     if i == 0:
-                        conds.append(f"ON {condition.sql.replace("%s", str(condition.param))}")
+                        conds.append(f"ON {condition.sql.replace('%s', str(condition.param))}")
                     else:
-                        conds.append(f"{condition_type} {condition.sql.replace("%s", str(condition.param))}")
+                        conds.append(f"{condition_type} {condition.sql.replace('%s', str(condition.param))}")
                 clause += " " + " ".join(conds)
 
             joins.append(clause)
@@ -231,7 +231,7 @@ class Query:
 
         #Build the join clause of the string
         join_clause = self._build_join()
-        sql += join_clause
+        sql += join_clause + " "
 
         #Build and sanitize WHERE clauses
         if self.where_clauses:
