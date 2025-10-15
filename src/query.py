@@ -237,7 +237,9 @@ class Query:
         if self.where_clauses:
             sql += "WHERE " + " AND ".join(p.sql for p in self.where_clauses)
             for p in self.where_clauses:
-                params.append(p.param)
+                #Only adds to params list if the param is defined (NULL and field comparisons should have SQLPart.param = None)
+                if p:
+                    params.append(p.param)
             #Adding a trailing space for future statements
             sql += " "
 
