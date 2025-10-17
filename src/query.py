@@ -1,3 +1,4 @@
+import re
 import field
 import table
 import sqlpart
@@ -6,6 +7,9 @@ import enum
 
 from sqlpart import SQLPart
 
+_UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+)
 
 class JoinTypes(enum.Enum):
     """
@@ -239,7 +243,10 @@ class Query:
             for p in self.where_clauses:
                 #Only adds to params list if the param is defined (NULL and field comparisons should have SQLPart.param = None)
                 if p:
-                    params.append(p.param)
+                    if isinstance(p.param, (list, tuple)):
+                        params.extend(p.param)
+                    else:
+                        params.append(p.param)
             #Adding a trailing space for future statements
             sql += " "
 
