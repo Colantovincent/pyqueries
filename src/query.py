@@ -116,7 +116,7 @@ class Query:
                 clause += " " + " ".join(conds)
 
             joins.append(clause)
-        return " " + " ".join(joins)
+        return " ".join(joins)
 
     def _build_order_by(self):
         """
@@ -245,7 +245,7 @@ class Query:
                 if p:
                     if isinstance(p.param, (list, tuple)):
                         params.extend(p.param)
-                    else:
+                    elif p.param is not None:
                         params.append(p.param)
             #Adding a trailing space for future statements
             sql += " "
